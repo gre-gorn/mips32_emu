@@ -1,4 +1,4 @@
-#include <iostream>
+﻿#include <iostream>
 #include <string>
 #include <vector>
 #include <map>
@@ -23,6 +23,9 @@ using namespace std;
 #define FUNCT_MASK (uint32_t)0b0111111
 #define SHAMT_MASK (uint32_t)(0b11111 << SHAMT_SHIFT)
 #define J_MASK (uint32_t)(0b1111 << J_SHIFT)
+#define BYTE_MASK 0x000000ff
+#define LO_WORD_MASK 0x0000ffff
+#define HI_WORD_MASK 0xffff0000
 #define RS(data) (uint32_t)((data & RS_MASK) >> RS_SHIFT)
 #define RT(data) (uint32_t)((data & RT_MASK) >> RT_SHIFT)
 #define RD(data) (uint32_t)((data & RD_MASK) >> RD_SHIFT)
@@ -84,6 +87,10 @@ typedef enum {
 	//return address, calle save
 	R31 = 31,
 	ra = 31,
+
+	//HI, LO - 64 bit for example result from MUL, DIV
+	hi = 32,
+	lo = 33
 } Reg;
 
 typedef union {
@@ -122,12 +129,14 @@ private:
 		{ R29, "$sp"},
 		{ R30, "$fp"},
 		{ R31, "$ra"},
+		{ hi, "$hi"},
+		{ lo, "$lo"},
 	};
 
 	bool _logEnabled = false;
 
 	IBus* _bus;
-	uint32_t _registers[32];
+	uint32_t _registers[34];//32 + HI & LO
 	uint32_t _pc = 0;//program counter
 	uint32_t _hi = 0;
 	uint32_t _lo = 0;
@@ -227,6 +236,12 @@ private:
 	void SW();
 
 	//Data movement instructions
+	//Caution: Tricky rule number two: If you try to read a value from HI or LO,
+	//you must wait two instructions before performing any operation that writes
+	//to HI or LO. Otherwise, the reads will produce garbage. The instruction that
+	//writes to HI or LO could be a multiplication or division operation,
+	//or it could be MTHI or MTLO.
+	//source: https://devblogs.microsoft.com/oldnewthing/20180404-00/?p=98435
 	void MFHI();
 	void MFLO();
 	void MTHI();

@@ -88,7 +88,7 @@ int main()
 
     MIPS32 *core = new MIPS32(bus);
     core->SetPC(0x00400000);
-    core->EnableLog(true);
+    core->EnableLog(false);
     
     while (!core->Tick()) {}
 

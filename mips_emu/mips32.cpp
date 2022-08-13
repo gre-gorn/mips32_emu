@@ -160,7 +160,7 @@ void MIPS32::InitOpcodes() {
 		{"andi",  (uint32_t)0b001100 << 26, &MIPS32::ANDI},//12
 		{"ori",   (uint32_t)0b001101 << 26, &MIPS32::ORI},//13
 		{"xori",  (uint32_t)0b001110 << 26, &MIPS32::XORI},//14
-		{"lui",   (uint32_t)0b001111 << 26, &MIPS32::LHI},//15
+		{"lhi",   (uint32_t)0b001111 << 26, &MIPS32::LHI},//15
 
 		{"lb",    (uint32_t)0b100000 << 26, &MIPS32::LB},//32		
 		{"lh",    (uint32_t)0b100001 << 26, &MIPS32::LH},//33, computed address must be a multiple of 2
@@ -257,17 +257,13 @@ void MIPS32::LogJ() {
 //Arithmeticand logical instructions
 void MIPS32::ADD()
 {
-	_registers[RD(_fetched)] = _registers[RS(_fetched)] + _registers[RT(_fetched)];
+	_registers[RD(_fetched)] = (int32_t)_registers[RS(_fetched)] + (int32_t)_registers[RT(_fetched)];
 	LogReg(true);
-}
-
-void MIPS32::ADDU()
-{
 }
 
 void MIPS32::ADDI()
 {
-	_registers[RT(_fetched)] = _registers[(Reg)RS(_fetched)] + (int16_t)IMM(_fetched);
+	_registers[RT(_fetched)] = (int32_t)_registers[(Reg)RS(_fetched)] + (int16_t)IMM(_fetched);
 	LogImm(true);
 }
 
@@ -275,6 +271,58 @@ void MIPS32::ADDIU()
 {
 	_registers[RT(_fetched)] = _registers[(Reg)RS(_fetched)] + IMM(_fetched);
 	LogImm(true);
+}
+
+void MIPS32::ADDU()
+{
+	_registers[RD(_fetched)] = _registers[RS(_fetched)] + _registers[RT(_fetched)];
+	LogReg(true);
+}
+
+void MIPS32::SUB()
+{
+	_registers[RD(_fetched)] = (int32_t)_registers[RS(_fetched)] - (int32_t)_registers[RT(_fetched)];
+	LogReg(true);
+}
+
+void MIPS32::SUBU()
+{
+	_registers[RD(_fetched)] = _registers[RS(_fetched)] - _registers[RT(_fetched)];
+	LogReg(true);
+}
+
+void MIPS32::DIV()
+{
+	//hi - remainder
+	//lo - quotient
+	_registers[(Reg)hi] = (int32_t)_registers[RS(_fetched)] % (int32_t)_registers[RT(_fetched)];
+	_registers[(Reg)lo] = (int32_t)_registers[RS(_fetched)] / (int32_t)_registers[RT(_fetched)];
+	LogReg(true);
+}
+
+void MIPS32::DIVU()
+{
+	//hi - remainder
+	//lo - quotient
+	_registers[(Reg)hi] = _registers[RS(_fetched)] % _registers[RT(_fetched)];
+	_registers[(Reg)lo] = _registers[RS(_fetched)] / _registers[RT(_fetched)];
+	LogReg(true);
+}
+
+void MIPS32::MULT()
+{
+	int64_t result = (int64_t)((int32_t)_registers[RS(_fetched)] * (int32_t)_registers[RT(_fetched)]);
+	_registers[(Reg)hi] = (int32_t)(result >> 32);
+	_registers[(Reg)lo] = (int32_t)(result & 0x00000000ffffffff);
+	LogReg(true);
+}
+
+void MIPS32::MULTU()
+{
+	uint64_t result = (uint64_t)(_registers[RS(_fetched)] * _registers[RT(_fetched)]);
+	_registers[(Reg)hi] = (uint32_t)(result >> 32);
+	_registers[(Reg)lo] = (uint32_t)(result & 0x00000000ffffffff);
+	LogReg(true);
 }
 
 void MIPS32::AND()
@@ -319,22 +367,6 @@ void MIPS32::XORI()
 	LogImm(true);
 }
 
-void MIPS32::DIV()
-{
-}
-
-void MIPS32::DIVU()
-{
-}
-
-void MIPS32::MULT()
-{
-}
-
-void MIPS32::MULTU()
-{
-}
-
 void MIPS32::SLL()
 {
 	_registers[(Reg)RT(_fetched)] = _registers[(Reg)RD(_fetched)] << SHAMT(_fetched);
@@ -343,14 +375,14 @@ void MIPS32::SLL()
 
 void MIPS32::SLLV()
 {
-}
-
-void MIPS32::SRA()
-{
+	_registers[(Reg)RT(_fetched)] = _registers[(Reg)RD(_fetched)] << _registers[(Reg)RS(_fetched)];
+	LogShift(true);
 }
 
 void MIPS32::SRAV()
 {
+	_registers[(Reg)RT(_fetched)] = (int32_t)_registers[(Reg)RD(_fetched)] >> _registers[(Reg)RS(_fetched)];
+	LogShift(true);
 }
 
 void MIPS32::SRL()
@@ -359,27 +391,16 @@ void MIPS32::SRL()
 	LogShift(true);
 }
 
+void MIPS32::SRA()
+{
+	_registers[(Reg)RT(_fetched)] = (int32_t)_registers[(Reg)RD(_fetched)] >> SHAMT(_fetched);
+	LogShift(true);
+}
+
 void MIPS32::SRLV()
 {
-}
-
-void MIPS32::SUB()
-{
-}
-
-void MIPS32::SUBU()
-{
-}
-
-
-
-//Constant - manipulating instructions
-void MIPS32::LHI()
-{
-}
-
-void MIPS32::LLO()
-{
+	_registers[(Reg)RT(_fetched)] = _registers[(Reg)RD(_fetched)] >> _registers[(Reg)RS(_fetched)];
+	LogShift(true);
 }
 
 //Comparison instructions
@@ -404,7 +425,7 @@ void MIPS32::BEQ()
 {
 	bool branch = _registers[(Reg)RS(_fetched)] == _registers[(Reg)RT(_fetched)];
 	//TODO: Tick();//branch delay
-	_pc = branch ? _pc + (IMM(_fetched) << 2) : _pc;
+	_pc = branch ? (_pc + (IMM(_fetched) << 2)) : _pc;
 	LogImm();
 }
 
@@ -412,7 +433,7 @@ void MIPS32::BNE()
 {
 	bool branch = _registers[(Reg)RS(_fetched)] != _registers[(Reg)RT(_fetched)];
 	//TODO: Tick();//branch delay
-	_pc = branch ? _pc + (IMM(_fetched) << 2) : _pc;
+	_pc = branch ? (_pc + (IMM(_fetched) << 2)) : _pc;
 	LogImm();
 }
 
@@ -420,7 +441,7 @@ void MIPS32::BLTZ()
 {
 	bool branch = (int32_t)_registers[(Reg)RS(_fetched)] < 0;
 	//TODO: Tick();//branch delay
-	_pc = branch ? _pc + IMM(_fetched) << 2 : _pc;
+	_pc = branch ? (_pc + (IMM(_fetched) << 2)) : _pc;
 	LogImm();
 }
 
@@ -428,7 +449,7 @@ void MIPS32::BGEZ()
 {
 	bool branch = (int32_t)_registers[(Reg)RS(_fetched)] >= 0;
 	//TODO: Tick();//branch delay
-	_pc = branch ? _pc + IMM(_fetched) << 2 : _pc;
+	_pc = branch ? (_pc + (IMM(_fetched) << 2)) : _pc;
 	LogImm();
 }
 
@@ -479,12 +500,28 @@ void MIPS32::JR()
 }
 
 //Load instructions
+void MIPS32::LHI()
+{
+	_registers[RD(_fetched)] = (IMM(_fetched) << 16) & HI_WORD_MASK;
+	LogImm(true);
+}
+
+void MIPS32::LLO()
+{
+	_registers[RD(_fetched)] = IMM(_fetched) & LO_WORD_MASK;
+	LogImm(true);
+}
+
 void MIPS32::LB()
 {
+	_registers[(Reg)RD(_fetched)] = (int8_t)(_bus->Read(_registers[(Reg)RS(_fetched)] + IMM(_fetched)) & BYTE_MASK);
+	LogImm(true);
 }
 
 void MIPS32::LBU()
 {
+	_registers[(Reg)RD(_fetched)] = _bus->Read(_registers[(Reg)RS(_fetched)] + IMM(_fetched)) & BYTE_MASK;
+	LogImm(true);
 }
 
 void MIPS32::LH()
@@ -497,6 +534,8 @@ void MIPS32::LHU()
 
 void MIPS32::LW()
 {
+	_registers[(Reg)RD(_fetched)] = _bus->Read(_registers[(Reg)RS(_fetched)] + IMM(_fetched)) & BYTE_MASK;
+	LogImm(true);
 }
 
 //Store instructions
@@ -515,18 +554,22 @@ void MIPS32::SW()
 //Data movement instructions
 void MIPS32::MFHI()
 {
+	_registers[(Reg)RD(_fetched)] = _registers[(Reg)hi];
 }
 
 void MIPS32::MFLO()
 {
+	_registers[(Reg)RD(_fetched)] = _registers[(Reg)lo];
 }
 
 void MIPS32::MTHI()
 {
+	_registers[(Reg)hi] = _registers[(Reg)RS(_fetched)];
 }
 
 void MIPS32::MTLO()
 {
+	_registers[(Reg)hi] = _registers[(Reg)RS(_fetched)];
 }
 
 //Exception and interrupt instructions
