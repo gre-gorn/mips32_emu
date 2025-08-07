@@ -348,3 +348,14 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+
+# MIPS32 Emulator specific
+# Compiled object files
+*.o
+
+# Executable files
+mips_emu/mips_emu
+mips_emu/*.exe
+
+# VS Code settings
+.vscode/
