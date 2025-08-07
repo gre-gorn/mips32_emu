@@ -222,6 +222,11 @@ public:
 	void SetPC(uint32_t addr);
 	uint32_t GetPC();
 	void EnableLog(bool enable = true);
+	void Reset();
+
+	// Register access methods
+	uint32_t GetRegister(uint32_t index) const;
+	void SetRegister(uint32_t index, uint32_t value);
 
 	bool Tick();
 

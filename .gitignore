@@ -350,12 +350,35 @@ MigrationBackup/
 .ionide/
 
 # MIPS32 Emulator specific
+# Build directories
+build/
+bin/
+lib/
+
 # Compiled object files
 *.o
 
 # Executable files
 mips_emu/mips_emu
 mips_emu/*.exe
+test_unity
+test_api
+
+# Shared libraries
+*.dylib
+*.so
+*.dll
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!mips_emu/cmake/MIPS32EmuConfig.cmake.in
 
 # VS Code settings
 .vscode/
+
+# macOS
+.DS_Store

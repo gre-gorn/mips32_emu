@@ -21,6 +21,45 @@ void MIPS32::EnableLog(bool enable)
 	_logEnabled = enable;
 }
 
+void MIPS32::Reset()
+{
+	// Reset all registers to zero
+	for (int i = 0; i < 34; ++i)
+	{
+		_registers[i] = 0;
+	}
+
+	// Reset PC to start address
+	_pc = 0;
+
+	// Reset internal state
+	_clock = 0;
+	_fetched = 0;
+	_break = false;
+
+	// Clear opcode
+	_opcode = Opcode();
+}
+
+uint32_t MIPS32::GetRegister(uint32_t index) const
+{
+	if (index < 34)
+	{
+		return _registers[index];
+	}
+	return 0;
+}
+
+void MIPS32::SetRegister(uint32_t index, uint32_t value)
+{
+	if (index < 34)
+	{
+		_registers[index] = value;
+		// Ensure register 0 stays zero
+		_registers[0] = 0;
+	}
+}
+
 bool MIPS32::Tick()
 {
 	Fetch();
